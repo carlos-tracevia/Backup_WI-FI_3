@@ -1,3 +1,6 @@
+
+
+
 // Configuração inicial do JsSIP
 let sipNumber;
 let pass;

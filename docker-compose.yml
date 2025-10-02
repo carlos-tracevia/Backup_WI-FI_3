@@ -1,20 +1,25 @@
+
+
 version: '3.8'
 
 services:
-  # Servidor DNS Dockerizado
   dns-server:
     build: ./dns
     container_name: dns-server
     ports:
-      - "53:53/udp"
-      - "53:53/tcp"
+      - "192.168.2.151:53:53/udp"
+      - "192.168.2.151:53:53/tcp"
     volumes:
       - ./dns/dnsmasq.conf:/etc/dnsmasq.conf:ro
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    networks:
+      tracevia-net:
+        ipv4_address: 172.25.0.53
 
   front:
+    dns: [172.25.0.53]
     build:
       context: ./ligador-wifi
       dockerfile: Dockerfile
@@ -24,8 +29,11 @@ services:
       - "4205:4205"
     environment:
       FRONT_ENV: teste
+    networks:
+      - tracevia-net
 
   back:
+    dns: [172.25.0.53]
     build:
       context: ./target/0.0.2
       dockerfile: Dockerfile
@@ -37,51 +45,59 @@ services:
     restart: always
     environment:
       - ASTERISK_HOST=asterisk
-      - ASTERISK_PORT=45600
+      - ASTERISK_PORT=5038
     depends_on:
       - asterisk
-      - dns-server
+    networks:
+      - tracevia-net
 
   nginx:
+    dns: [172.25.0.53]
     build: ./nginx
     image: wifi-nginx
     ports:
       - "80:80"
       - "443:443"
-      - "5173:5173"
     depends_on:
-      - front
-      - back
-      - dns-server
+      - asterisk
     volumes:
       - /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/nginx/certs/:ro
-#      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - /home/tracevia/app/applications/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-#     - /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/nginx/certs/:ro
-#       - ./nginx/nginx.conf/:/etc/nginx/nginx.conf:ro
-#      - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
-#      - ./nginx/sites-available/:/etc/nginx/sites-available/:ro
-#      - ./nginx/sites-enabled/:/etc/nginx/sites-enabled/:ro
     restart: always
+    networks:
+      - tracevia-net
 
   asterisk:
+    dns: [172.25.0.53]
     image: asterisk/asterisk:18.11.0
-    ports:
-      - "5060:5060"
-      - "5061:5061"
-      - "8088:8088"
-      - "8089:8089"
-      - "5038:5038"
-      - "10000-10500:10000-10500"
+    container_name: asterisk
+    network_mode: host
+    #ports:
+      #- "5060:5060/udp"
+      #- "5061:5061/tcp"
+      #- "8088:8088"
+      #- "8089:8089"
+      #- "5038:5038/tcp"
+      #- "10000-10500:10000-10500/udp"
+    #networks:
+      #
+      #- tracevia-net
     volumes:
-      #- /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/asterisk/keys/
       - ./asterisk/config/:/etc/asterisk/:ro
+      - /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/asterisk/keys/:ro
       - asterisk-data:/var/lib/asterisk
       - asterisk-logs:/var/log/asterisk
       - asterisk-spool:/var/spool/asterisk
     environment:
       - TZ=America/Sao_Paulo
     restart: always
+
+networks:
+  tracevia-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16  # 🔥 Mudado para evitar conflito
 
 volumes:
   asterisk-data:
