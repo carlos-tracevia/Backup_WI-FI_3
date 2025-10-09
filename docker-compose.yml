@@ -12,8 +12,7 @@ services:
     volumes:
       - ./dns/dnsmasq.conf:/etc/dnsmasq.conf:ro
     restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
+    cap_add: [ NET_ADMIN ]
     networks:
       tracevia-net:
         ipv4_address: 172.25.0.53
@@ -44,12 +43,14 @@ services:
       - "8085:8085"
     restart: always
     environment:
-      - ASTERISK_HOST=asterisk
+      - ASTERISK_HOST=host.docker.internal
       - ASTERISK_PORT=5038
     depends_on:
       - asterisk
     networks:
       - tracevia-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   nginx:
     dns: [172.25.0.53]
@@ -69,21 +70,14 @@ services:
 
   asterisk:
     dns: [172.25.0.53]
-    image: asterisk/asterisk:18.11.0
+    build:
+      context: ./asterisk
+      dockerfile: Dockerfile
+    image: docker-asterisk
     container_name: asterisk
     network_mode: host
-    #ports:
-      #- "5060:5060/udp"
-      #- "5061:5061/tcp"
-      #- "8088:8088"
-      #- "8089:8089"
-      #- "5038:5038/tcp"
-      #- "10000-10500:10000-10500/udp"
-    #networks:
-      #
-      #- tracevia-net
     volumes:
-      - ./asterisk/config/:/etc/asterisk/:ro
+      - ./asterisk/config/:/etc/asterisk/:rw
       - /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/asterisk/keys/:ro
       - asterisk-data:/var/lib/asterisk
       - asterisk-logs:/var/log/asterisk
@@ -91,16 +85,20 @@ services:
     environment:
       - TZ=America/Sao_Paulo
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL","asterisk -rx 'core show uptime' >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
 
 networks:
   tracevia-net:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.25.0.0/16  # 🔥 Mudado para evitar conflito
+        - subnet: 172.25.0.0/16
 
 volumes:
   asterisk-data:
   asterisk-logs:
   asterisk-spool:
-

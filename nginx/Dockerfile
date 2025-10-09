@@ -1,14 +1,10 @@
 FROM nginx:alpine
 
+# seu nginx.conf precisa ir para onde o Nginx realmente lê
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY ssl-params.conf /etc/nginx/ssl-params.conf
-
-COPY nginx.conf /home/tracevia/app/applications/docker/nginx/nginx.conf
-#COPY conf.d/ /home/tracevia/app/applications/docker/nginx/conf.d/
-#COPY sites-available/ /home/tracevia/app/applications/docker/nginx/sites-available/
-#COPY sites-enabled/ /home/tracevia/app/applications/docker/nginx/sites-enabled/
 
 RUN mkdir -p /etc/nginx/certs
 
-EXPOSE 80 443 5173
-
+EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
