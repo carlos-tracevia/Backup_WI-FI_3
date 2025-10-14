@@ -78,6 +78,8 @@ services:
     network_mode: host
     volumes:
       - ./asterisk/config/:/etc/asterisk/:rw
+      - ./asterisk/odbc/odbc.ini:/etc/odbc.ini:ro
+      - ./asterisk/odbc/odbcinst.ini:/etc/odbcinst.ini:ro
       - /home/tracevia/app/certificates/homologacaotracevia.com.br-0003/:/etc/asterisk/keys/:ro
       - asterisk-data:/var/lib/asterisk
       - asterisk-logs:/var/log/asterisk

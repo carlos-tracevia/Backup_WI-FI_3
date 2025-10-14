@@ -1,16 +1,29 @@
-# Dockerfile - Asterisk 18.11.0 (WebRTC + SRTP) sem XMLDOC
-FROM debian:bullseye
+FROM debian:bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG ASTERISK_VERSION=18.11.0
 
-# Dependências de build + runtime
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential git wget curl subversion pkg-config ca-certificates \
+# (opcional) força IPv4
+RUN echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+
+# 1) Primeiro update “tolerante” + instala os mínimos (certs+keyring)
+RUN set -eux; \
+  apt-get update -o Acquire::AllowInsecureRepositories=true || true; \
+  apt-get install -y --no-install-recommends ca-certificates debian-archive-keyring || true; \
+  rm -rf /var/lib/apt/lists/*
+
+# 2) Agora segue normal (com assinaturas válidas)
+RUN set -eux; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
+    build-essential git wget curl subversion pkg-config \
     libssl-dev libxml2-dev libncurses5-dev uuid-dev libjansson-dev \
     libsqlite3-dev libedit-dev libsrtp2-dev libcurl4-openssl-dev \
-    libopus-dev xmlstarlet tar xz-utils && \
-    rm -rf /var/lib/apt/lists/*
+    libopus-dev xmlstarlet tar xz-utils \
+    unixodbc unixodbc-dev odbcinst1debian2 libodbc1 \
+    odbc-mariadb \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 WORKDIR /usr/src
 RUN wget https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VERSION}.tar.gz && \
