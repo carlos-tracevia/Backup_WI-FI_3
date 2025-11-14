@@ -1,6 +1,5 @@
-
-
-version: '3.8'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+version: "3.8"
 
 services:
   dns-server:
@@ -12,13 +11,15 @@ services:
     volumes:
       - ./dns/dnsmasq.conf:/etc/dnsmasq.conf:ro
     restart: unless-stopped
-    cap_add: [ NET_ADMIN ]
+    cap_add:
+      - NET_ADMIN
     networks:
       tracevia-net:
         ipv4_address: 172.25.0.53
 
   front:
-    dns: [172.25.0.53]
+    dns:
+      - 172.25.0.53
     build:
       context: ./ligador-wifi
       dockerfile: Dockerfile
@@ -31,8 +32,28 @@ services:
     networks:
       - tracevia-net
 
+  # ---------------------------
+  # MySQL para o backend externo
+  # ---------------------------
+  wifi-mysql:
+    image: mysql:8.0
+    container_name: wifi-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: tracevia_app
+      MYSQL_USER: backend_user
+      MYSQL_PASSWORD: trcvbr18
+    ports:
+      - "192.168.2.151:3306:3306"   # expõe MySQL no IP da 151
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - tracevia-net
+
   back:
-    dns: [172.25.0.53]
+    dns:
+      - 172.25.0.53
     build:
       context: ./target/0.0.2
       dockerfile: Dockerfile
@@ -53,7 +74,8 @@ services:
       - "host.docker.internal:host-gateway"
 
   nginx:
-    dns: [172.25.0.53]
+    dns:
+      - 172.25.0.53
     build: ./nginx
     image: wifi-nginx
     ports:
@@ -70,7 +92,8 @@ services:
       - tracevia-net
 
   asterisk:
-    dns: [172.25.0.53]
+    dns:
+      - 172.25.0.53
     build:
       context: ./asterisk
       dockerfile: Dockerfile
@@ -89,7 +112,7 @@ services:
       - TZ=America/Sao_Paulo
     restart: always
     healthcheck:
-      test: ["CMD-SHELL","asterisk -rx 'core show uptime' >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "asterisk -rx 'core show uptime' >/dev/null 2>&1"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -105,3 +128,14 @@ volumes:
   asterisk-data:
   asterisk-logs:
   asterisk-spool:
+  mysql-data:
+
+
+
+
+
+
+
+
+
+
